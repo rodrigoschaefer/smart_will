@@ -16,15 +16,134 @@ contract SmartWill {
         uint ammount;
         uint unlockTime;
         uint lastActivity;
-        address recipient;
+        address payable recipient;
     }
 
     uint currentId;
 
     mapping(address => Will[]) public willsByOwner;
+    mapping(address => Will[]) public willsByRecipient;
 
     constructor() {
         currentId = 1;
+    }
+
+    function createWill(uint unlockTime, address payable recipient) external payable returns (uint){
+        Will[] storage wills = willsByOwner[msg.sender];
+        // Check if maxWillCount reached
+        require(wills.length < maxWillCount, "Maximum number of wills reached");
+        currentId++;
+        Will memory will = Will({
+            id: currentId,
+            owner: msg.sender,
+            ammount: msg.value,
+            unlockTime: unlockTime,
+            recipient: recipient,
+            lastActivity: 0
+        });
+        wills.push(will);
+        willsByOwner[msg.sender] = wills;
+
+        Will[] storage willsByRecipientList = willsByRecipient[recipient];
+        require(willsByRecipientList.length < maxWillCount, "Maximum number of wills reached for this retriever");    
+        willsByRecipientList.push(will);
+        willsByRecipient[recipient] = willsByRecipientList;
+
+        return currentId;
+    }
+
+    function getMaxWillCount() external pure returns (uint){
+        return maxWillCount;
+    }
+
+    /**
+     * @dev Get a will by id
+     * @return w will
+     */
+    function getWill(uint id) external view returns (Will memory w){
+        Will[] memory willsByOwnerList = willsByOwner[msg.sender];
+        for (uint8 index = 0; index < willsByOwnerList.length; index++) {
+            if(willsByOwnerList[index].id == id) {
+               return willsByOwnerList[index];
+            }
+        }
+        revert('Not found');
+    }
+
+    /**
+     * @dev Retrieve will value
+     */
+    function retrieveValueByWillId(uint id) external{
+        Will[] memory wills = willsByRecipient[msg.sender];
+        require(
+           wills.length > 0, "Will list not found"
+        );
+        Will memory will;
+        for (uint8 index = 0; index < wills.length; index++) {
+            if(wills[index].id == id) {
+                will = wills[index];
+            }
+        }
+        require(
+            will.id == id,"Will not found"
+        );
+        require(
+            will.recipient == msg.sender,"Not the recipient"
+        );
+        require(
+            block.timestamp > will.unlockTime,"Unlock time not reached"
+        );
+        //emit VaultValueRetrieved(vault.owner,id,msg.sender);
+        will.recipient.transfer(will.ammount);
+    }
+
+    /**
+     * @dev Deletes a will
+     */
+    function deleteWill(uint id) public returns (bool){
+        Will[] storage willsByOwnerList = willsByOwner[msg.sender];
+        require(
+           willsByOwnerList.length > 0, "Will list not found"
+        );
+        Will memory will;
+        for (uint8 index = 0; index < willsByOwnerList.length; index++) {
+            if(willsByOwnerList[index].id == id) {
+               will = willsByOwnerList[index];
+               willsByOwnerList[index] = willsByOwnerList[willsByOwnerList.length-1];
+               willsByOwnerList.pop();
+               willsByOwner[msg.sender] = willsByOwnerList;
+            }
+        }
+        if(will.id > 0){
+                Will[] storage willsByRecipientList = willsByRecipient[will.recipient];
+                for (uint8 index = 0; index < willsByRecipientList.length; index++) {
+                    if(willsByRecipientList[index].id == id) {
+                        will = willsByRecipientList[index];
+                        willsByRecipientList[index] = willsByRecipientList[willsByRecipientList.length-1];
+                        willsByRecipientList.pop();
+                        willsByRecipient[will.recipient] = willsByRecipientList;
+                        //emit VaultDeleted(msg.sender,id);
+                        return true;
+                    }
+                }
+        }
+        return false;
+    }
+
+    /**
+     * @dev Get wills assigned to this owner address
+     * @return wills
+     */
+    function getWillsByOwner() public view returns (Will[] memory){
+        return willsByOwner[msg.sender];
+    }
+
+    /**
+     * @dev Get wills assigned to this recipient address
+     * @return wills
+     */
+    function getWillsByRecipient() public view returns (Will[] memory){
+        return willsByRecipient[msg.sender];
     }
 
 }
