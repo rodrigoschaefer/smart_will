@@ -76,34 +76,7 @@ contract SmartWill {
         }
         revert('Not found');
     }
-
-    /**
-     * @dev Retrieve will value
-     */
-    function retrieveValueByWillId(uint id) external{
-        Will[] memory wills = willsByRecipient[msg.sender];
-        require(
-           wills.length > 0, "Will list not found"
-        );
-        Will memory will;
-        for (uint8 index = 0; index < wills.length; index++) {
-            if(wills[index].id == id) {
-                will = wills[index];
-                break;
-            }
-        }
-        require(
-            will.id == id,"Will not found"
-        );
-        require(
-            will.recipient == msg.sender,"Not the recipient"
-        );
-        require(
-            block.timestamp > will.unlockTime,"Unlock time not reached"
-        );
-        will.recipient.transfer(will.ammount);
-    }
-
+    
     /**
      * @dev Deletes a will
      */
