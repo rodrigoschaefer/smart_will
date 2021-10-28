@@ -82,6 +82,7 @@ contract SmartWill {
         for (uint8 index = 0; index < wills.length; index++) {
             if(wills[index].id == id) {
                 will = wills[index];
+                break;
             }
         }
         require(
@@ -112,6 +113,7 @@ contract SmartWill {
                willsByOwnerList[index] = willsByOwnerList[willsByOwnerList.length-1];
                willsByOwnerList.pop();
                willsByOwner[msg.sender] = willsByOwnerList;
+               break;
             }
         }
         if(will.id > 0){
@@ -144,6 +146,44 @@ contract SmartWill {
      */
     function getWillsByRecipient() public view returns (Will[] memory){
         return willsByRecipient[msg.sender];
+    }
+
+    function inherit(uint id) public{
+        Will[] storage willsByRecipientList = willsByRecipient[msg.sender];
+        require(
+           willsByRecipientList.length > 0, "Will list not found"
+        );
+        Will memory will;
+        for (uint8 index = 0; index < willsByRecipientList.length; index++) {
+            if(willsByRecipientList[index].id == id) {
+                will = willsByRecipientList[index];   
+                break;
+            }
+        }
+        require(
+            will.recipient == msg.sender, "Wrong recipient"
+        );
+        require(
+            will.unlockTime < block.timestamp, "Transfer time not reached"
+        );
+        require(
+            will.lastActivity < block.timestamp + 180 days, "Inheritance needs to wait 6 months from last owner activity"
+        );
+        (bool sent,) = will.recipient.call{value: will.ammount}("");
+        require(sent, "Failed to send Ether");
+    }
+
+    function registerActivy(uint id) public {
+        Will[] storage willsByOwnerList = willsByOwner[msg.sender];
+        require(
+           willsByOwnerList.length > 0, "Will list not found"
+        );
+        for (uint8 index = 0; index < willsByOwnerList.length; index++) {
+            if(willsByOwnerList[index].id == id) {
+               willsByOwnerList[index].lastActivity = block.timestamp;
+               break;
+            }
+        }
     }
 
 }
