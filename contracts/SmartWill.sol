@@ -8,6 +8,11 @@ pragma solidity >=0.8.0 <0.9.0;
  */
 contract SmartWill {
 
+    event WillCreated(address owner, uint id);
+    event WillDeleted(address owner, uint id);
+    event WillActivityRegistered(uint id, uint blockTime);
+    event WillInherited(address recipient, uint id);
+
     uint constant maxWillCount = 10;
 
     struct Will {
@@ -48,6 +53,8 @@ contract SmartWill {
         require(willsByRecipientList.length < maxWillCount, "Maximum number of wills reached for this retriever");    
         willsByRecipientList.push(will);
         willsByRecipient[recipient] = willsByRecipientList;
+
+        emit WillCreated(msg.sender,currentId);
 
         return currentId;
     }
@@ -94,7 +101,6 @@ contract SmartWill {
         require(
             block.timestamp > will.unlockTime,"Unlock time not reached"
         );
-        //emit VaultValueRetrieved(vault.owner,id,msg.sender);
         will.recipient.transfer(will.ammount);
     }
 
@@ -124,7 +130,7 @@ contract SmartWill {
                         willsByRecipientList[index] = willsByRecipientList[willsByRecipientList.length-1];
                         willsByRecipientList.pop();
                         willsByRecipient[will.recipient] = willsByRecipientList;
-                        //emit VaultDeleted(msg.sender,id);
+                        emit WillCreated(msg.sender,id);
                         return true;
                     }
                 }
@@ -171,6 +177,7 @@ contract SmartWill {
         );
         (bool sent,) = will.recipient.call{value: will.ammount}("");
         require(sent, "Failed to send Ether");
+        emit WillInherited(msg.sender,currentId);
     }
 
     function registerActivy(uint id) public {
@@ -181,6 +188,7 @@ contract SmartWill {
         for (uint8 index = 0; index < willsByOwnerList.length; index++) {
             if(willsByOwnerList[index].id == id) {
                willsByOwnerList[index].lastActivity = block.timestamp;
+               emit WillActivityRegistered(currentId,block.timestamp);
                break;
             }
         }
