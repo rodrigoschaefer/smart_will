@@ -49,12 +49,12 @@ contract TestSmartWill {
         Assert.equal(will.lastActivity,block.timestamp,"Last activity should be equal to current block timestamp");
     }
 
-    function testInherit() public {
+    function testRedeemWill() public {
         uint balance = address(this).balance;
         testCreateWill();
         uint newBalance = address(this).balance;
         Assert.equal(newBalance, balance - willValue, "Balance should have decreased");
-        smartWill.inherit(createdWillId);
+        smartWill.redeemWill(createdWillId);
         newBalance = address(this).balance;
         Assert.equal(newBalance, balance, "Balance should be back to original");
     }

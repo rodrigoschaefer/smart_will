@@ -11,7 +11,7 @@ contract SmartWill {
     event WillCreated(address owner, uint id);
     event WillDeleted(address owner, uint id);
     event WillActivityRegistered(uint id, uint blockTime);
-    event WillInherited(address recipient, uint id);
+    event WillRedeemed(address recipient, uint id);
 
     uint constant maxWillCount = 10;
 
@@ -127,7 +127,7 @@ contract SmartWill {
         return willsByRecipient[msg.sender];
     }
 
-    function inherit(uint id) public{
+    function redeemWill(uint id) public{
         Will[] storage willsByRecipientList = willsByRecipient[msg.sender];
         require(
            willsByRecipientList.length > 0, "Will list not found"
@@ -150,7 +150,7 @@ contract SmartWill {
         );
         (bool sent,) = will.recipient.call{value: will.ammount}("");
         require(sent, "Failed to send Ether");
-        emit WillInherited(msg.sender,currentId);
+        emit WillRedeemed(msg.sender,currentId);
     }
 
     function registerActivy(uint id) public {
