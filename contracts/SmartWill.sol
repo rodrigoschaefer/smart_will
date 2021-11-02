@@ -19,7 +19,7 @@ contract SmartWill {
         uint id;
         address owner;
         uint ammount;
-        uint unlockTime;
+        uint redemptionDate;
         uint lastActivity;
         address payable recipient;
     }
@@ -33,7 +33,7 @@ contract SmartWill {
         currentId = 1;
     }
 
-    function createWill(uint unlockTime, address payable recipient) external payable returns (uint){
+    function createWill(uint redemptionDate, address payable recipient) external payable returns (uint){
         Will[] storage wills = willsByOwner[msg.sender];
         // Check if maxWillCount reached
         require(wills.length < maxWillCount, "Maximum number of wills reached");
@@ -42,7 +42,7 @@ contract SmartWill {
             id: currentId,
             owner: msg.sender,
             ammount: msg.value,
-            unlockTime: unlockTime,
+            redemptionDate: redemptionDate,
             recipient: recipient,
             lastActivity: 0
         });
@@ -143,7 +143,7 @@ contract SmartWill {
             will.recipient == msg.sender, "Wrong recipient"
         );
         require(
-            will.unlockTime < block.timestamp, "Transfer time not reached"
+            will.redemptionDate < block.timestamp, "Transfer time not reached"
         );
         require(
             will.lastActivity < block.timestamp + 180 days, "Inheritance needs to wait 6 months from last owner activity"
