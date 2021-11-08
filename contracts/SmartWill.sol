@@ -115,16 +115,16 @@ contract SmartWill {
      * @dev Get wills assigned to this owner address
      * @return wills
      */
-    function getWillsByOwner() public view returns (Will[] memory){
-        return willsByOwner[msg.sender];
+    function getWillsByOwner(address ownerAddress) public view returns (Will[] memory){
+        return willsByOwner[ownerAddress];
     }
 
     /**
      * @dev Get wills assigned to this recipient address
      * @return wills
      */
-    function getWillsByRecipient() public view returns (Will[] memory){
-        return willsByRecipient[msg.sender];
+    function getWillsByRecipient(address recipientAddress) public view returns (Will[] memory){
+        return willsByRecipient[recipientAddress];
     }
 
     function redeemWill(uint id) public{
