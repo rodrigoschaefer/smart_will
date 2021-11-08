@@ -14,7 +14,7 @@ contract TestSmartWill {
     SmartWill smartWill = SmartWill(DeployedAddresses.SmartWill());
 
     address payable expectedOwner = payable(address(this));
-    //address payable recipient = payable(address(0xfd2Cc0AE059F54b1917Ac41a46C496e23f73cD15));
+    address payable recipient = payable(address(0xfd2Cc0AE059F54b1917Ac41a46C496e23f73cD15));
 
     uint createdWillId;
     uint willValue = 10000;
@@ -39,6 +39,12 @@ contract TestSmartWill {
 
     function testGetAllOwnerWills() public {
         SmartWill.Will[] memory wills = smartWill.getWillsByOwner(expectedOwner);
+        Assert.equal(wills.length, 1, "Should have found a will");
+    }
+
+     function testGetAllRecipientWills() public {
+        smartWill.createWill{ value: willValue }(block.timestamp - 1 hours, recipient);
+        SmartWill.Will[] memory wills = smartWill.getWillsByRecipient(recipient);
         Assert.equal(wills.length, 1, "Should have found a will");
     }
 
