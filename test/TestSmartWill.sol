@@ -37,6 +37,11 @@ contract TestSmartWill {
         Assert.isNotZero(createdWillId, "Id should be greater than zero");
     }
 
+    function testGetAllOwnerWills() public {
+        SmartWill.Will[] memory wills = smartWill.getWillsByOwner(expectedOwner);
+        Assert.equal(wills.length, 1, "Should have found a will");
+    }
+
     function testGetWill() public {
         SmartWill.Will memory will = smartWill.getWill(createdWillId);
         Assert.equal(createdWillId, will.id, "Ids should be equal");
