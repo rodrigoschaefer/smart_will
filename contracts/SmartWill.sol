@@ -9,9 +9,10 @@ pragma solidity >=0.8.0 <0.9.0;
 contract SmartWill {
 
     event WillCreated(address owner, uint id);
-    event WillDeleted(address owner, uint id);
+    event WillRefunded(address owner, uint id);
     event WillActivityRegistered(uint id, uint blockTime);
     event WillRedeemed(address recipient, uint id);
+    event BalanceChanged(address owner, uint balance);
 
     uint constant maxWillCount = 10;
 
@@ -78,9 +79,9 @@ contract SmartWill {
     }
     
     /**
-     * @dev Deletes a will
+     * @dev Deletes a will and returns value to owner (minus gas costs)
      */
-    function deleteWill(uint id) public returns (bool){
+    function refundWill(uint id) public returns (bool){
         Will[] storage willsByOwnerList = willsByOwner[msg.sender];
         require(
            willsByOwnerList.length > 0, "Will list not found"
@@ -100,10 +101,16 @@ contract SmartWill {
                 for (uint8 index = 0; index < willsByRecipientList.length; index++) {
                     if(willsByRecipientList[index].id == id) {
                         will = willsByRecipientList[index];
+
+                        emit BalanceChanged(address(this),address(this).balance);    
+                        (bool sent,) = will.owner.call{value: will.ammount}("");
+                        require(sent, "Failed to send Ether");
+                        emit BalanceChanged(address(this),address(this).balance);   
+
                         willsByRecipientList[index] = willsByRecipientList[willsByRecipientList.length-1];
                         willsByRecipientList.pop();
                         willsByRecipient[will.recipient] = willsByRecipientList;
-                        emit WillCreated(msg.sender,id);
+                        emit WillRefunded(msg.sender,id);
                         return true;
                     }
                 }

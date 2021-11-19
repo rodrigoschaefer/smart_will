@@ -69,6 +69,16 @@ contract TestSmartWill {
         newBalance = address(this).balance;
         Assert.equal(newBalance, balance, "Balance should be back to original");
     }
+
+    function testRefundWill() public {
+        uint originalBalance = address(this).balance;
+        testCreateWill();
+        uint createdWillBalance = address(this).balance;
+        Assert.equal(createdWillBalance, originalBalance - willValue, "Balance should have decreased");
+        smartWill.refundWill(createdWillId);
+        uint refundedWillBalance = address(this).balance;
+        Assert.isAbove(refundedWillBalance, createdWillBalance, "Balance should have increased");
+    }
     
 }
 
