@@ -11,8 +11,9 @@ contract SmartWill {
     event WillCreated(address owner, uint id);
     event WillRefunded(address owner, uint id);
     event WillActivityRegistered(uint id, uint blockTime);
-    event WillRedeemed(address recipient, uint id);
+    event WillRedeemed(address recipient, uint id, uint blockTime, uint redemptionTime);
     event BalanceChanged(address owner, uint balance);
+    event RedemptionError(uint blockTime, uint redemptionTime);
 
     uint constant maxWillCount = 10;
 
@@ -23,17 +24,18 @@ contract SmartWill {
         uint redemptionDate;
         uint lastActivity;
         address payable recipient;
+        bool redeemed;
     }
 
     uint currentId;
 
-    mapping(address => Will[]) public willsByOwner;
-    mapping(address => Will[]) public willsByRecipient;
+    mapping(address => Will[])  willsByOwner;
+    mapping(address => Will[])  willsByRecipient;
 
     constructor() {
         currentId = 1;
     }
-
+    
     function createWill(uint redemptionDate, address payable recipient) external payable returns (uint){
         Will[] storage wills = willsByOwner[msg.sender];
         // Check if maxWillCount reached
@@ -45,16 +47,15 @@ contract SmartWill {
             ammount: msg.value,
             redemptionDate: redemptionDate,
             recipient: recipient,
-            lastActivity: 0
+            lastActivity: 0,
+            redeemed: false
         });
         wills.push(will);
-        willsByOwner[msg.sender] = wills;
-
+        
         Will[] storage willsByRecipientList = willsByRecipient[recipient];
         require(willsByRecipientList.length < maxWillCount, "Maximum number of wills reached for this retriever");    
         willsByRecipientList.push(will);
-        willsByRecipient[recipient] = willsByRecipientList;
-
+        
         emit WillCreated(msg.sender,currentId);
 
         return currentId;
@@ -69,7 +70,7 @@ contract SmartWill {
      * @return w will
      */
     function getWill(uint id) external view returns (Will memory w){
-        Will[] memory willsByOwnerList = willsByOwner[msg.sender];
+        Will[] storage willsByOwnerList = willsByOwner[msg.sender];
         for (uint8 index = 0; index < willsByOwnerList.length; index++) {
             if(willsByOwnerList[index].id == id) {
                return willsByOwnerList[index];
@@ -134,30 +135,44 @@ contract SmartWill {
         return willsByRecipient[recipientAddress];
     }
 
-    function redeemWill(uint id) public{
+    function redeemWill(uint id) external{
         Will[] storage willsByRecipientList = willsByRecipient[msg.sender];
         require(
            willsByRecipientList.length > 0, "Will list not found"
         );
-        Will memory will;
+        bool recipientFound = false;
         for (uint8 index = 0; index < willsByRecipientList.length; index++) {
             if(willsByRecipientList[index].id == id) {
-                will = willsByRecipientList[index];   
+                require(
+                    willsByRecipientList[index].recipient == msg.sender, "Wrong recipient"
+                );
+                require(
+                    willsByRecipientList[index].redemptionDate < block.timestamp, "Transfer time not reached"
+                );
+                require(
+                    willsByRecipientList[index].lastActivity < block.timestamp + 180 days, "Inheritance needs to wait 6 months from last owner activity"
+                );
+                (bool sent,) = willsByRecipientList[index].recipient.call{value: willsByRecipientList[index].ammount}("");
+                require(sent, "Failed to send Ether");
+                willsByRecipientList[index].redeemed = true;
+                emit WillRedeemed(msg.sender,id, block.timestamp,willsByRecipientList[index].redemptionDate);
+                recipientFound = true;
                 break;
             }
         }
+        require(recipientFound, 'Recipient not found');
+        bool ownerFound = false;
+        Will[] storage willsByOwnerList = willsByOwner[msg.sender];
         require(
-            will.recipient == msg.sender, "Wrong recipient"
+           willsByOwnerList.length > 0, "Will list not found"
         );
-        require(
-            will.redemptionDate < block.timestamp, "Transfer time not reached"
-        );
-        require(
-            will.lastActivity < block.timestamp + 180 days, "Inheritance needs to wait 6 months from last owner activity"
-        );
-        (bool sent,) = will.recipient.call{value: will.ammount}("");
-        require(sent, "Failed to send Ether");
-        emit WillRedeemed(msg.sender,currentId);
+        for (uint8 index = 0; index < willsByOwnerList.length; index++) {
+            if(willsByOwnerList[index].id == id) {
+                willsByOwnerList[index].redeemed = true;
+                ownerFound = true;
+            }
+        }
+        require(ownerFound, 'Owner not found');
     }
 
     function registerActivy(uint id) public {

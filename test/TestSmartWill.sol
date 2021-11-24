@@ -19,6 +19,8 @@ contract TestSmartWill {
     uint createdWillId;
     uint willValue = 10000;
 
+    event RedeemResult(int redeemed);
+
     // Function to receive Ether. msg.data must be empty
     receive() external payable {}
 
@@ -31,11 +33,15 @@ contract TestSmartWill {
         uint maxWills = smartWill.getMaxWillCount();
         Assert.equal(maxWills, 10, "Max vaults should be 10");
     }
+   
 
     function testCreateWill() public {
         createdWillId = smartWill.createWill{ value: willValue }(block.timestamp - 1 hours, expectedOwner);
         Assert.isNotZero(createdWillId, "Id should be greater than zero");
+        SmartWill.Will memory will = smartWill.getWill(createdWillId);
+        Assert.equal(will.id, createdWillId, "Id should be the one expected");
     }
+
 
     function testGetAllOwnerWills() public {
         SmartWill.Will[] memory wills = smartWill.getWillsByOwner(expectedOwner);
@@ -62,14 +68,16 @@ contract TestSmartWill {
 
     function testRedeemWill() public {
         uint balance = address(this).balance;
-        testCreateWill();
+        createdWillId = smartWill.createWill{ value: willValue }(block.timestamp - 1 hours, expectedOwner);
         uint newBalance = address(this).balance;
         Assert.equal(newBalance, balance - willValue, "Balance should have decreased");
         smartWill.redeemWill(createdWillId);
         newBalance = address(this).balance;
         Assert.equal(newBalance, balance, "Balance should be back to original");
+        SmartWill.Will memory will = smartWill.getWill(createdWillId);
+        Assert.equal(will.redeemed, true, "Will should be redeemed");
     }
-
+/*
     function testRefundWill() public {
         uint originalBalance = address(this).balance;
         testCreateWill();
@@ -79,6 +87,7 @@ contract TestSmartWill {
         uint refundedWillBalance = address(this).balance;
         Assert.isAbove(refundedWillBalance, createdWillBalance, "Balance should have increased");
     }
+    */
     
 }
 
