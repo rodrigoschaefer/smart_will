@@ -33,7 +33,6 @@ contract TestSmartWill {
         uint maxWills = smartWill.getMaxWillCount();
         Assert.equal(maxWills, 10, "Max vaults should be 10");
     }
-   
 
     function testCreateWill() public {
         createdWillId = smartWill.createWill{ value: willValue }(block.timestamp - 1 hours, expectedOwner);
@@ -41,7 +40,6 @@ contract TestSmartWill {
         SmartWill.Will memory will = smartWill.getWill(createdWillId);
         Assert.equal(will.id, createdWillId, "Id should be the one expected");
     }
-
 
     function testGetAllOwnerWills() public {
         SmartWill.Will[] memory wills = smartWill.getWillsByOwner(expectedOwner);
@@ -77,17 +75,33 @@ contract TestSmartWill {
         SmartWill.Will memory will = smartWill.getWill(createdWillId);
         Assert.equal(will.redeemed, true, "Will should be redeemed");
     }
-/*
+
+    function testFailedRedeemByActivityWill() public {
+        createdWillId = smartWill.createWill{ value: willValue }(block.timestamp - 1 hours, expectedOwner);
+        smartWill.registerActivy(createdWillId);
+        string memory errorMsg;
+        try  smartWill.redeemWill(createdWillId) {
+        } catch Error(string memory reason) {
+            errorMsg = reason;
+        }
+        Assert.equal(errorMsg,'Inheritance needs to wait 6 months from last owner activity', 'Will should not be redeemed within the 180 days activity period');
+    }
+
     function testRefundWill() public {
         uint originalBalance = address(this).balance;
-        testCreateWill();
+        createdWillId = smartWill.createWill{ value: willValue }(block.timestamp - 1 hours, expectedOwner);
         uint createdWillBalance = address(this).balance;
         Assert.equal(createdWillBalance, originalBalance - willValue, "Balance should have decreased");
         smartWill.refundWill(createdWillId);
         uint refundedWillBalance = address(this).balance;
         Assert.isAbove(refundedWillBalance, createdWillBalance, "Balance should have increased");
+        string memory errorMsg;
+        try  smartWill.getWill(createdWillId) returns (SmartWill.Will memory) {
+        } catch Error(string memory reason) {
+            errorMsg = reason;
+        }
+        Assert.equal(errorMsg,'Not found', 'Will should not be found');
     }
-    */
     
 }
 

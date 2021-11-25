@@ -80,46 +80,6 @@ contract SmartWill {
     }
     
     /**
-     * @dev Deletes a will and returns value to owner (minus gas costs)
-     */
-    function refundWill(uint id) public returns (bool){
-        Will[] storage willsByOwnerList = willsByOwner[msg.sender];
-        require(
-           willsByOwnerList.length > 0, "Will list not found"
-        );
-        Will memory will;
-        for (uint8 index = 0; index < willsByOwnerList.length; index++) {
-            if(willsByOwnerList[index].id == id) {
-               will = willsByOwnerList[index];
-               willsByOwnerList[index] = willsByOwnerList[willsByOwnerList.length-1];
-               willsByOwnerList.pop();
-               willsByOwner[msg.sender] = willsByOwnerList;
-               break;
-            }
-        }
-        if(will.id > 0){
-                Will[] storage willsByRecipientList = willsByRecipient[will.recipient];
-                for (uint8 index = 0; index < willsByRecipientList.length; index++) {
-                    if(willsByRecipientList[index].id == id) {
-                        will = willsByRecipientList[index];
-
-                        emit BalanceChanged(address(this),address(this).balance);    
-                        (bool sent,) = will.owner.call{value: will.ammount}("");
-                        require(sent, "Failed to send Ether");
-                        emit BalanceChanged(address(this),address(this).balance);   
-
-                        willsByRecipientList[index] = willsByRecipientList[willsByRecipientList.length-1];
-                        willsByRecipientList.pop();
-                        willsByRecipient[will.recipient] = willsByRecipientList;
-                        emit WillRefunded(msg.sender,id);
-                        return true;
-                    }
-                }
-        }
-        return false;
-    }
-
-    /**
      * @dev Get wills assigned to this owner address
      * @return wills
      */
@@ -150,7 +110,7 @@ contract SmartWill {
                     willsByRecipientList[index].redemptionDate < block.timestamp, "Transfer time not reached"
                 );
                 require(
-                    willsByRecipientList[index].lastActivity < block.timestamp + 180 days, "Inheritance needs to wait 6 months from last owner activity"
+                    willsByRecipientList[index].lastActivity < block.timestamp - 180 days, "Inheritance needs to wait 6 months from last owner activity"
                 );
                 (bool sent,) = willsByRecipientList[index].recipient.call{value: willsByRecipientList[index].ammount}("");
                 require(sent, "Failed to send Ether");
@@ -175,18 +135,73 @@ contract SmartWill {
         require(ownerFound, 'Owner not found');
     }
 
-    function registerActivy(uint id) public {
+    /**
+     * @dev Deletes a will and returns value to owner (minus gas costs)
+     */
+    function refundWill(uint id) public returns (bool){
         Will[] storage willsByOwnerList = willsByOwner[msg.sender];
         require(
            willsByOwnerList.length > 0, "Will list not found"
         );
+        Will memory will;
         for (uint8 index = 0; index < willsByOwnerList.length; index++) {
             if(willsByOwnerList[index].id == id) {
-               willsByOwnerList[index].lastActivity = block.timestamp;
-               emit WillActivityRegistered(currentId,block.timestamp);
+               will = willsByOwnerList[index];
+               willsByOwnerList[index] = willsByOwnerList[willsByOwnerList.length-1];
+               willsByOwnerList.pop();
+               willsByOwner[msg.sender] = willsByOwnerList;
                break;
             }
         }
+        if(will.id > 0){
+                Will[] storage willsByRecipientList = willsByRecipient[will.recipient];
+                for (uint8 index = 0; index < willsByRecipientList.length; index++) {
+                    if(willsByRecipientList[index].id == id) {
+                        will = willsByRecipientList[index];
+
+                        (bool sent,) = will.owner.call{value: will.ammount}("");
+                        require(sent, "Failed to send Ether");
+                        
+                        willsByRecipientList[index] = willsByRecipientList[willsByRecipientList.length-1];
+                        willsByRecipientList.pop();
+                        willsByRecipient[will.recipient] = willsByRecipientList;
+                        emit WillRefunded(msg.sender,id);
+                        return true;
+                    }
+                }
+        }
+        return false;
+    }
+
+    function registerActivy(uint id) public {
+        uint blockTime = block.timestamp;
+        Will[] storage willsByOwnerList = willsByOwner[msg.sender];
+        require(
+           willsByOwnerList.length > 0, "Owner Will list not found"
+        );
+        bool ownerFound = false;
+        for (uint8 index = 0; index < willsByOwnerList.length; index++) {
+            if(willsByOwnerList[index].id == id) {
+               willsByOwnerList[index].lastActivity = blockTime;
+               ownerFound = true;
+               break;
+            }
+        }
+        require(ownerFound, 'Owner not found');
+        Will[] storage willsByRecipientList = willsByRecipient[msg.sender];
+        require(
+           willsByRecipientList.length > 0, "Recipient Will list not found"
+        );
+        bool recipientFound = false;
+        for (uint8 index = 0; index < willsByRecipientList.length; index++) {
+            if(willsByRecipientList[index].id == id) {
+               willsByRecipientList[index].lastActivity = blockTime;
+               recipientFound = true;
+               break;
+            }
+        }
+        require(recipientFound, 'Recipient not found');
+        emit WillActivityRegistered(id,blockTime);
     }
 
 }
