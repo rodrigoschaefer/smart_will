@@ -14,7 +14,7 @@ contract TestSmartWill {
     SmartWill smartWill = SmartWill(DeployedAddresses.SmartWill());
 
     address payable expectedOwner = payable(address(this));
-    address payable recipient = payable(address(0xfd2Cc0AE059F54b1917Ac41a46C496e23f73cD15));
+    address payable recipient = payable(address(0xfa67329C59457b31a58d797d3970d11c96Eb6702));
 
     uint createdWillId;
     uint willValue = 10000;
@@ -95,12 +95,8 @@ contract TestSmartWill {
         smartWill.refundWill(createdWillId);
         uint refundedWillBalance = address(this).balance;
         Assert.isAbove(refundedWillBalance, createdWillBalance, "Balance should have increased");
-        string memory errorMsg;
-        try  smartWill.getWill(createdWillId) returns (SmartWill.Will memory) {
-        } catch Error(string memory reason) {
-            errorMsg = reason;
-        }
-        Assert.equal(errorMsg,'Not found', 'Will should not be found');
+        SmartWill.Will memory will = smartWill.getWill(createdWillId);
+        Assert.equal(will.refunded,true, 'Will should be refunded');
     }
     
 }

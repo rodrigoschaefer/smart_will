@@ -25,6 +25,7 @@ contract SmartWill {
         uint lastActivity;
         address payable recipient;
         bool redeemed;
+        bool refunded;
     }
 
     uint currentId;
@@ -33,9 +34,13 @@ contract SmartWill {
     mapping(address => Will[])  willsByRecipient;
 
     constructor() {
-        currentId = 1;
+        currentId = 0;
     }
     
+    /**
+     * @dev Creates a new will
+     * @return will id
+     */
     function createWill(uint redemptionDate, address payable recipient) external payable returns (uint){
         Will[] storage wills = willsByOwner[msg.sender];
         // Check if maxWillCount reached
@@ -48,7 +53,8 @@ contract SmartWill {
             redemptionDate: redemptionDate,
             recipient: recipient,
             lastActivity: 0,
-            redeemed: false
+            redeemed: false,
+            refunded: false
         });
         wills.push(will);
         
@@ -95,6 +101,9 @@ contract SmartWill {
         return willsByRecipient[recipientAddress];
     }
 
+     /**
+     * @dev Redeems a will
+     */
     function redeemWill(uint id) external{
         Will[] storage willsByRecipientList = willsByRecipient[msg.sender];
         require(
@@ -138,41 +147,40 @@ contract SmartWill {
     /**
      * @dev Deletes a will and returns value to owner (minus gas costs)
      */
-    function refundWill(uint id) public returns (bool){
+    function refundWill(uint id) external{
         Will[] storage willsByOwnerList = willsByOwner[msg.sender];
         require(
-           willsByOwnerList.length > 0, "Will list not found"
+           willsByOwnerList.length > 0, "Owner will list not found"
         );
         Will memory will;
         for (uint8 index = 0; index < willsByOwnerList.length; index++) {
             if(willsByOwnerList[index].id == id) {
                will = willsByOwnerList[index];
-               willsByOwnerList[index] = willsByOwnerList[willsByOwnerList.length-1];
-               willsByOwnerList.pop();
-               willsByOwner[msg.sender] = willsByOwnerList;
+               willsByOwnerList[index].refunded = true;
                break;
             }
         }
-        if(will.id > 0){
-                Will[] storage willsByRecipientList = willsByRecipient[will.recipient];
-                for (uint8 index = 0; index < willsByRecipientList.length; index++) {
-                    if(willsByRecipientList[index].id == id) {
-                        will = willsByRecipientList[index];
-
-                        (bool sent,) = will.owner.call{value: will.ammount}("");
-                        require(sent, "Failed to send Ether");
-                        
-                        willsByRecipientList[index] = willsByRecipientList[willsByRecipientList.length-1];
-                        willsByRecipientList.pop();
-                        willsByRecipient[will.recipient] = willsByRecipientList;
-                        emit WillRefunded(msg.sender,id);
-                        return true;
-                    }
-                }
+        require(will.id > 0, 'Will not found');
+        Will[] storage willsByRecipientList = willsByRecipient[will.recipient];
+        require(
+           willsByRecipientList.length > 0, "Recipient will list not found"
+        );
+        for (uint8 index = 0; index < willsByRecipientList.length; index++) {
+            if(willsByRecipientList[index].id == id) {
+                
+                (bool sent,) = will.owner.call{value: will.ammount}("");
+                require(sent, "Failed to send Ether");
+                
+                willsByRecipientList[index].refunded = true;
+                emit WillRefunded(msg.sender,id);
+                break;
+            }
         }
-        return false;
     }
 
+    /**
+     * @dev Register activity on a will record to avoid redemption
+     */
     function registerActivy(uint id) public {
         uint blockTime = block.timestamp;
         Will[] storage willsByOwnerList = willsByOwner[msg.sender];
