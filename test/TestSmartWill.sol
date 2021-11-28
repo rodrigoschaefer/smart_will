@@ -59,7 +59,7 @@ contract TestSmartWill {
     }
 
     function testRegisterActivy() public {
-        smartWill.registerActivy(createdWillId);
+        smartWill.registerActivity(createdWillId);
         SmartWill.Will memory will = smartWill.getWill(createdWillId);
         Assert.equal(will.lastActivity,block.timestamp,"Last activity should be equal to current block timestamp");
     }
@@ -98,6 +98,6 @@ contract TestSmartWill {
         SmartWill.Will memory will = smartWill.getWill(createdWillId);
         Assert.equal(will.refunded,true, 'Will should be refunded');
     }
-    
+
 }
 

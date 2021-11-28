@@ -181,7 +181,7 @@ contract SmartWill {
     /**
      * @dev Register activity on a will record to avoid redemption
      */
-    function registerActivy(uint id) public {
+    function registerActivity(uint id) public {
         uint blockTime = block.timestamp;
         Will[] storage willsByOwnerList = willsByOwner[msg.sender];
         require(
