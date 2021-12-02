@@ -78,7 +78,7 @@ contract TestSmartWill {
 
     function testFailedRedeemByActivityWill() public {
         createdWillId = smartWill.createWill{ value: willValue }(block.timestamp - 1 hours, expectedOwner);
-        smartWill.registerActivy(createdWillId);
+        smartWill.registerActivity(createdWillId);
         string memory errorMsg;
         try  smartWill.redeemWill(createdWillId) {
         } catch Error(string memory reason) {
