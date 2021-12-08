@@ -187,16 +187,16 @@ contract SmartWill {
         require(
            willsByOwnerList.length > 0, "Owner Will list not found"
         );
-        bool ownerFound = false;
+        address recipient;
         for (uint8 index = 0; index < willsByOwnerList.length; index++) {
             if(willsByOwnerList[index].id == id) {
                willsByOwnerList[index].lastActivity = blockTime;
-               ownerFound = true;
+               recipient = willsByOwnerList[index].recipient;
                break;
             }
         }
-        require(ownerFound, 'Owner not found');
-        Will[] storage willsByRecipientList = willsByRecipient[msg.sender];
+        require(recipient != address(0), 'Owner not found');
+        Will[] storage willsByRecipientList = willsByRecipient[recipient];
         require(
            willsByRecipientList.length > 0, "Recipient Will list not found"
         );
