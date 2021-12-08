@@ -1,5 +1,5 @@
 # smart_will
-A simple time based resource transfer Ethereum smart contract
+A simple time based resource transfer Ethereum smart contract written in Solidity.
 
 ## Features
 - Create a 'Will' structure on the blockchain to hold an ammount of ether.
